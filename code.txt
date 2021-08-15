@@ -1,0 +1,31 @@
+library(plm)
+library(stargazer)
+
+setwd("C:/Users/Kakuho/Desktop")
+
+DB<- read.csv("input.csv",header = TRUE,stringsAsFactors=F)
+DB<-pdata.frame(DB,index=c("sector","year"))
+
+DB$KperLH<-DB$K / DB$LH * 10^6
+DB$NETperLH<-DB$NET / DB$LH * 10^6
+DB$dLP<-log(DB$LP) - log(lag(DB$LP))
+DB$dK<-log(DB$K) - log(lag(DB$K))
+DB$dNET<-log(DB$NET) - log(lag(DB$NET))
+DB$dKperLH<-log(DB$KperLH) - log(lag(DB$KperLH))
+DB$dNETperLH<-log(DB$NETperLH) - log(lag(DB$NETperLH))
+
+T<-1994:2019
+N<-10
+res <- data.frame(matrix(nrow=length(T)-N+1, ncol=4))
+colnames(res) <- c("year","coeff", "se","p_value")
+res$year<-(T[1]+N-1):2019
+for(i in 1:(length(T)-N+1)){
+  period<-(1993+i):(1992+i+N)
+  model<-plm(dLP~lag(dKperLH,0)+lag(dNETperLH,0),data=DB[DB$year%in%as.character(period),],model="within",effect="twoways")
+  res$coeff[i]<-summary(model)$coefficients[1]
+  res$se[i]<-summary(model)$coefficients[2]
+  res$p_value[i]<-summary(model)$coefficients[4]
+}
+
+plot(res$coeff)
+write.csv(DB,"DB.csv")
